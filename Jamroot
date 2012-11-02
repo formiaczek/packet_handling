@@ -1,0 +1,12 @@
+
+# Specify the path to the Boost project use the one specified by environment.
+# e.g. if you installed boost into: C:\boost_1_51_0 (windows) set BOOST_ROOT 
+# to this value.
+import os ;
+local BOOST_ROOT  = [ os.environ BOOST_ROOT ] ;
+use-project boost : $(BOOST_ROOT) ; 
+
+using gcc ;
+
+build-project  test ;
+

@@ -1,0 +1,18 @@
+
+project unit_tests 
+  : requirements 
+    <include>.
+    <include>../
+    <include>catch/include
+    
+    <define>DEBUG
+    <define>TESTING
+  ;
+
+test-suite test_suite
+  :  
+    [ run       packet_handling_test.cpp  ]
+  ;
+
+
+
