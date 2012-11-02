@@ -1,0 +1,6 @@
+"test\packet_handling_test.cpp" -Fo"test\bin\packet_handling_test.test\msvc-10.0\debug\threading-multi\packet_handling_test.obj"    -TP /Z7 /Od /Ob0 /W3 /GR /MDd /Zc:forScope /Zc:wchar_t /wd4675 /EHs -c 
+-DDEBUG 
+-DTESTING 
+"-I." 
+"-Itest" 
+"-Itest\catch\include"
