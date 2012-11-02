@@ -16,7 +16,8 @@ This is a small library to facilitate extracting (parsing)
    accessing various fields of the actual data.
  - it can help with implementing various protocols
 
- Example:
+```c
+/* Example:
  Example packet (Initialise Data Source-Packet I.D. 128
  for the GPS protocol) (message sent over serial port):
 
@@ -50,4 +51,4 @@ This is a small library to facilitate extracting (parsing)
  gps_id_128.set_field("Time of Week", 0xffeb3fe3); // to set the field.
 
  // or by id:
- gps_id_128.set_field(7, 2); // id == 7 for channels
+ gps_id_128.set_field(7, 2); // id == 7 for channels */
