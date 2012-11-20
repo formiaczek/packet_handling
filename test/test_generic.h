@@ -17,6 +17,9 @@
 #include <catch.hpp>
 #define REQUIRE_NOT_NULL( expr ) REQUIRE((expr) != (void*)NULL)
 #define REQUIRE_NULL( expr ) REQUIRE((expr) == (void*)NULL)
+#ifndef SIGBREAK
+#define SIGBREAK SIGTSTP
+#endif
 
 #include <signal.h>
 #include <exception>
@@ -65,7 +68,7 @@ void handle_signal(int sig)
     Catch::IResultCapture& result = Catch::getCurrentContext().getResultCapture();
     printf("\n\nwhile executing test: %s\n", result.getCurrentTestName().c_str());
     printf("(last successful check was in %s,", result.getLastResult()->getFilename().c_str());
-    printf("line: %d)\n\n", result.getLastResult()->getLine());
+    printf("line: %d)\n\n", static_cast<int>(result.getLastResult()->getLine()));
     Catch::cleanUp();
 
     exit(-sig);

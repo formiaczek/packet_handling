@@ -10,3 +10,8 @@
 *.lai
 *.la
 *.a
+
+bin/*
+test/bin/*
+*.exe
+

@@ -99,6 +99,13 @@
 #include <exception>
 #include <iostream>
 
+#ifdef _MSC_VER
+// tell MSVC compiler to back-off with it's warning, (hopefully) I know how to use vsnprintf
+#define _CRT_SECURE_NO_DEPRECATE
+#define __PRETTY_FUNCTION__ __FUNCTION__
+#endif
+
+
 /**
  @brief  Default exception to allow to print some useful error info.
  */
@@ -109,12 +116,15 @@ public:
     /**
      @brief  Overloaded constructor. Use it as printf() for exceptions..
      */
-    GenericException(const char* format, ...)
+    GenericException(std::string format, ...)
     {
-        va_list vArgs;
-        va_start(vArgs, format);
-        vsnprintf(msg, MAX_MSG_SIZE, format, vArgs);
-        va_end(vArgs);
+        if(format.length() > 0)
+        {
+            va_list vArgs;
+            va_start(vArgs, format);
+            vsnprintf(msg, MAX_MSG_LEN, format.c_str(), vArgs);
+            va_end(vArgs);
+        }
     }
 
     /**
@@ -127,10 +137,10 @@ public:
 protected:
     enum constants
     {
-        MAX_MSG_SIZE = 512
+        MAX_MSG_LEN = 512
     };
 
-    char msg[MAX_MSG_SIZE];
+    char msg[MAX_MSG_LEN];
 };
 
 /**
