@@ -17,9 +17,7 @@
 #include <catch.hpp>
 #define REQUIRE_NOT_NULL( expr ) REQUIRE((expr) != (void*)NULL)
 #define REQUIRE_NULL( expr ) REQUIRE((expr) == (void*)NULL)
-#ifndef SIGBREAK
-#define SIGBREAK SIGTSTP
-#endif
+
 
 #include <signal.h>
 #include <exception>
@@ -52,9 +50,6 @@ void handle_signal(int sig)
         break;
     case SIGTERM:
         printf("Termination request");
-        break;
-    case SIGBREAK:
-        printf("Control-break");
         break;
     case SIGABRT:
         printf("Abnormal termination (abort)");

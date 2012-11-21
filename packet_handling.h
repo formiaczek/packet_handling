@@ -100,10 +100,12 @@
 #include <iostream>
 
 #ifdef _MSC_VER
-// tell MSVC compiler to back-off with it's warning, (hopefully) I know how to use vsnprintf
-#define _CRT_SECURE_NO_DEPRECATE
+#define VSNPRINTF(dest, max_len, format, vargs) vsnprintf_s(dest, max_len, max_len, format, vargs)
 #define __PRETTY_FUNCTION__ __FUNCTION__
+#else
+#define VSNPRINTF(dest, max_len, format, vargs) vsnprintf(dest, max_len, format, vargs)
 #endif
+
 
 
 /**
@@ -122,7 +124,7 @@ public:
         {
             va_list vArgs;
             va_start(vArgs, format);
-            vsnprintf(msg, MAX_MSG_LEN, format.c_str(), vArgs);
+            VSNPRINTF(msg, MAX_MSG_LEN, format.c_str(), vArgs);
             va_end(vArgs);
         }
     }
@@ -142,6 +144,26 @@ protected:
 
     char msg[MAX_MSG_LEN];
 };
+
+
+/**
+ * @brief template overloaded function used to determine if parameter is a pointer.
+ */
+template <class P>
+bool is_pointer_type(P*)
+{
+    return true;
+}
+
+/**
+ * @brief template overloaded function used to determine if parameter is a pointer.
+ */
+template <class R>
+bool is_pointer_type(R)
+{
+    return false;
+}
+
 
 /**
  @brief  PacketBuffer class. This class will hold the data to be processed
@@ -383,7 +405,8 @@ public:
                     offset(0),
                     length(0),
                     field_id(0),
-                    type(0)
+                    type(0),
+                    pointer(false)
     {
         printf("\nPacketField() called!!\n");
         get_val = &PacketBuffer::dummy_get;
@@ -395,7 +418,8 @@ public:
                     offset(starts_at_offset),
                     length(len),
                     field_id(id),
-                    type(0)
+                    type(0),
+                    pointer(false)
     {
         get_val = &PacketBuffer::dummy_get;
         set_val = &PacketBuffer::dummy_set;
@@ -412,6 +436,7 @@ public:
     void set_type_info()
     {
         type = const_cast<std::type_info*>(&typeid(T));
+        pointer = is_pointer_type(T());
     }
 
     /**
@@ -441,10 +466,16 @@ public:
         return NULL;
     }
 
+    bool is_pointer()
+    {
+        return pointer;
+    }
+
     uint32_t offset;
     uint32_t length;
     uint32_t field_id;
     std::type_info* type;
+    bool pointer;
     PacketBuffer::get_value get_val;
     PacketBuffer::set_value set_val;
     PacketBuffer::get_ptr get_ptr;
@@ -674,7 +705,7 @@ public:
                             __FUNCTION__);
         }
 
-        if (!typeid(T).__is_pointer_p())
+        if (!is_pointer_type(T()))
         {
             if (length == 0)
             {
@@ -817,7 +848,7 @@ public:
         {
             // if field is found, call the method it points to to access the data
             PacketField& f = i->second;
-            if (!f.type->__is_pointer_p())
+            if (!f.is_pointer())
             {
                 throw GenericException(
                                 "Packet::%s(): wrong method for non-pointer type field (%s).",
@@ -860,7 +891,7 @@ public:
         {
             // call the method it points to to access the data
             PacketField& f = fields_by_id[field_id];
-            if (!f.type->__is_pointer_p())
+            if (!f.is_pointer())
             {
                 throw GenericException(
                                 "Packet::%s(): wrong method for non-pointer type field (%d).",
@@ -902,7 +933,7 @@ public:
         {
             // if field is found, call the method it points to to access the data
             PacketField& f = i->second;
-            if (f.type->__is_pointer_p())
+            if (f.is_pointer())
             {
                 throw GenericException("Packet::%s(): wrong method for pointer type field (%s).",
                                        __FUNCTION__, name.c_str());
@@ -933,7 +964,7 @@ public:
         {
             // call the method it points to to access the data
             PacketField& f = fields_by_id[field_id];
-            if (f.type->__is_pointer_p())
+            if (f.is_pointer())
             {
                 throw GenericException("Packet::%s(): wrong method for pointer type field (%d).",
                                        __FUNCTION__, field_id);
@@ -971,7 +1002,7 @@ public:
         {
             // if field is found, call the method it points to to access the data
             PacketField& f = i->second;
-            if (!f.type->__is_pointer_p())
+            if (!f.is_pointer())
             {
                 throw GenericException(
                                 "Packet::%s(): wrong method for non-pointer type field (%s).",
@@ -1004,7 +1035,7 @@ public:
         {
             // call the method it points to to access the data
             PacketField& f = fields_by_id[field_id];
-            if (!f.type->__is_pointer_p())
+            if (!f.is_pointer())
             {
                 throw GenericException(
                                 "Packet::%s(): wrong method for non-pointer type field (%d).",
@@ -1087,7 +1118,7 @@ inline std::ostream& operator<<(std::ostream &out,  Packet& m)
             out << f->first.c_str();
         }
 
-        if (i->type->__is_pointer_p())
+        if (i->is_pointer())
         {
             uint8_t* vals = m.msg_buffer.get_uint8_ptr(i->offset);
             if (false) // TODO: verbose)

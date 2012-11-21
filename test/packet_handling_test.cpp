@@ -122,4 +122,26 @@ TEST_CASE( "Use strings in packets", "Should be able to use string fields in pac
 }
 
 
+TEST_CASE( "try with mismatched field types", "Should be able handle pointer/non-pointer types correctly" )
+{
+    Packet p(buffer, buff_size);
+    REQUIRE_THROWS( p.add_field<char*>("pointer") ); // can't add pointer type without specifying length
+    REQUIRE_NOTHROW( p.add_field<char*>("pointer", 10) ); // now OK with length > 0
+    REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
+
+    // confirm them back
+    char buf[32];
+    memset(buf, 0, 32);
+
+    REQUIRE_NOTHROW(p.set_field("pointer", "John Doe")); // OK for pointer fields..
+    REQUIRE_NOTHROW(p.get_field("pointer", buf));
+    REQUIRE_THROWS(p.set_field("non_pointer", "John Doe")); // .. but not OK for non-pointer fields..
+    REQUIRE_THROWS(p.get_field("non_pointer", buf));
+
+    // similar for fields-by-id access
+    REQUIRE_NOTHROW(p.set_field(0, "John Doe")); // OK for pointer fields..
+    REQUIRE_NOTHROW(p.get_field(0, buf));
+    REQUIRE_THROWS(p.set_field(1, "John Doe")); // .. but not OK for non-pointer fields..
+    REQUIRE_THROWS(p.get_field(1, buf));
+}
 
