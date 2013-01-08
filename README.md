@@ -1,20 +1,33 @@
 packet_handling
 ===============
 
-This is a small library to facilitate extracting (parsing)
- and accessing the data formed in packets of a fixed size.
- It was mainly created in order to provide a high-level
- interface for creating and parsing such packets.
+This is a small library originally written to facilitate 
+ access to the data serialized in packets of a fixed size.
+ Providing a high-level interface it can be used for serializing
+ any data.
 
- In some way it is similar to google protocol buffers
- (https://developers.google.com/protocol-buffers/),
+ In some ways it is similar to google protocol buffers
+ (https://developers.google.com/protocol-buffers/)
+
  but:
- - the format / layout of buffer(s) is created dynamically
+ - it is a C++ library, so it gets compiled with your program
+ - the format / layout of the data is defined dynamically
+   (no need to generate the it for a given format)
  - the actual data in the buffer does not contain any additional
-   information - this information is only held by the Packet object
- - Packet object is really like a 'template', or a parser, that 
-   facilitates accessing various fields of the actual data.
- - it can be useful when implementing various protocols
+   information - this information is only held by the Packet object.
+   Packet is really like a 'template', or a 'parser', that 
+   facilitates accessing various fields of the data.
+ - it can be useful when implementing protocols 
+   giving an easy interface to define data structures. 
+ - down side is that format has to be known at both sides:
+   - when reading / writing the data unless(*)...
+
+ - (*)TODO: perhaps could add some code to create/handle a header,
+    containing all format information needed to build a packet.
+   This header could then be stored/transmitted and used to re-create
+   a Packet at the 'reception' side?
+
+Refer to in-source documentation and examples for more information. 
 
 ```c
 /* Example:
@@ -52,6 +65,6 @@ This is a small library to facilitate extracting (parsing)
 
  // or by id:
  gps_id_128.set_field(7, 2); // id == 7 for channels */
+```
 
-Refer to in-source documentation and examples for more information. 
 
