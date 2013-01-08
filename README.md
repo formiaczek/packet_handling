@@ -2,19 +2,19 @@ packet_handling
 ===============
 
 This is a small library to facilitate extracting (parsing)
- and accessing the data formed in packets of a fixed format.
- It was mainly meant in order to provide an easy way for 
- creating and using such packets.
+ and accessing the data formed in packets of a fixed size.
+ It was mainly created in order to provide a high-level
+ interface for creating and parsing such packets.
 
  In some way it is similar to google protocol buffers
  (https://developers.google.com/protocol-buffers/),
  but:
- - the format / layout of buffer(s) can be created dynamically
+ - the format / layout of buffer(s) is created dynamically
  - the actual data in the buffer does not contain any additional
    information - this information is only held by the Packet object
- - Packet object is really like a 'template', or a parser that facilitates
-   accessing various fields of the actual data.
- - it can help with implementing various protocols
+ - Packet object is really like a 'template', or a parser, that 
+   facilitates accessing various fields of the actual data.
+ - it can be useful when implementing various protocols
 
 ```c
 /* Example:
@@ -52,3 +52,6 @@ This is a small library to facilitate extracting (parsing)
 
  // or by id:
  gps_id_128.set_field(7, 2); // id == 7 for channels */
+
+Refer to in-source documentation and examples for more information. 
+

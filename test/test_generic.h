@@ -86,7 +86,6 @@ int main(int argc, char* const argv[])
     signal(SIGFPE, handle_signal);
     signal(SIGSEGV, handle_signal);
     signal(SIGTERM, handle_signal);
-    signal(SIGBREAK, handle_signal);
     signal(SIGABRT, handle_signal);
 
     try

@@ -12,6 +12,7 @@
 *.a
 
 bin/*
+bin*
 test/bin/*
 *.exe
-
+*~
