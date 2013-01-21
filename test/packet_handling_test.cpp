@@ -145,3 +145,29 @@ TEST_CASE( "try with mismatched field types", "Should be able handle pointer/non
     REQUIRE_THROWS(p.get_field(1, buf));
 }
 
+
+TEST_CASE( "test sub-packets", "Should be able handle sub-packets correctly" )
+{
+    // prepare packet
+    Packet p(buffer, buff_size);
+    REQUIRE_NOTHROW( p.add_field<char*>("full_name", 20) ); // now OK with length > 0
+    REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
+    REQUIRE_NOTHROW( p.set_field("full_name", (char*)NULL) );
+
+    REQUIRE_THROWS( p.get_sub_packet("nonexisting")); // cant' create packet for non-existing field..
+    REQUIRE_THROWS( p.get_sub_packet("non_pointer")); // cant' create packet for non-pointer field..
+
+    REQUIRE_NOTHROW( p.get_sub_packet("full_name")); // OK
+
+    Packet& sub = p.get_sub_packet("full_name"); // second time should just return it
+
+    // confirm it's OK and boundaries do not exceed the original field
+    REQUIRE( sub.get_buffer_addr() == p.get_field("full_name", NULL) ); // should point at the original field
+    REQUIRE( sub.max_length() == 20 );
+
+    REQUIRE_NOTHROW( sub.add_field<uint8_t*>("name", 10) ); // should behave as normal packet, obviously..
+    REQUIRE_THROWS( sub.add_field<uint8_t*>("surname", 11) ); // too big - total of sub-fields should be no more than original one..
+    REQUIRE_NOTHROW( sub.add_field<uint8_t*>("surname", 10) );
+
+    std::cout << "whole packet:" << p;
+}
