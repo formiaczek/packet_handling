@@ -115,8 +115,7 @@ TEST_CASE( "Use strings in packets", "Should be able to use string fields in pac
 
     REQUIRE_NOTHROW(new_from_m.get_field("name", buf));
     REQUIRE(std::string(buf) == "John Doe");
-
-    REQUIRE(std::string("John Doe") == static_cast<char*>(new_from_m.get_field("name", buf)));
+    REQUIRE(std::string("John Doe") == static_cast<char*>(new_from_m.get_field("name", (char*)NULL) ));
 
     std::cout << new_from_m << std::endl;
 }
@@ -150,7 +149,7 @@ TEST_CASE( "test sub-packets", "Should be able handle sub-packets correctly" )
 {
     // prepare packet
     Packet p(buffer, buff_size);
-    REQUIRE_NOTHROW( p.add_field<char*>("full_name", 20) ); // now OK with length > 0
+    REQUIRE_NOTHROW( p.add_field<char*>("full_name", 20) );
     REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
     REQUIRE_NOTHROW( p.set_field("full_name", (char*)NULL) );
 
@@ -170,4 +169,68 @@ TEST_CASE( "test sub-packets", "Should be able handle sub-packets correctly" )
     REQUIRE_NOTHROW( sub.add_field<uint8_t*>("surname", 10) );
 
     std::cout << "whole packet:" << p;
+}
+
+
+TEST_CASE( "test sub-packets- adjust max size", "Adjusting maximum size." )
+{
+    // prepare packet
+    Packet p(buffer, buff_size);
+    REQUIRE_NOTHROW( p.add_field<char*>("full_name", 40) );
+    REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
+    REQUIRE_NOTHROW( p.set_field("full_name", (char*)NULL) );
+
+    REQUIRE_THROWS( p.get_sub_packet("nonexisting")); // cant' create packet for non-existing field..
+    REQUIRE_THROWS( p.get_sub_packet("non_pointer")); // cant' create packet for non-pointer field..
+
+    REQUIRE_NOTHROW( p.get_sub_packet("full_name")); // OK
+
+    Packet& sub = p.get_sub_packet("full_name"); // second time should just return it
+
+    // confirm it's OK and boundaries do not exceed the original field
+    REQUIRE( sub.get_buffer_addr() == p.get_field("full_name", NULL) ); // should point at the original field
+    REQUIRE_FALSE( sub.max_length() == 20 );
+
+    sub.adjust_max_length(30);
+    REQUIRE( sub.max_length() == 30 );
+
+    REQUIRE_NOTHROW( sub.add_field<uint8_t*>("name", 10) ); // should behave as normal packet, obviously..
+    REQUIRE_NOTHROW( sub.add_field<uint8_t*>("surname", 11) ); // OK
+
+    sub.adjust_max_length(); // not it should be a sum of the two fields that have been added above
+    REQUIRE( sub.max_length() == 21 );
+
+    std::cout << "whole packet:" << p;
+}
+
+
+TEST_CASE( "test sub-packets- copy fields", "Copying fields of a packet into another packet." )
+{
+    std::cout << "test copying fields" << "\n";
+    // prepare packet
+    Packet p(buffer, buff_size);
+    REQUIRE_NOTHROW( p.add_field<char*>("full_name", 40) );
+    REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
+    REQUIRE_NOTHROW( p.set_field("full_name", (char*)NULL) );
+
+    std::cout << "packet before copy: " << p << "\n";
+
+    uint32_t len = p.length();
+
+    char temp_buf[24];
+
+    Packet p1(temp_buf, 24);
+    REQUIRE_NOTHROW( p1.add_field<uint8_t>("first"));
+    REQUIRE_NOTHROW( p1.add_field<uint16_t>("second"));
+    REQUIRE_NOTHROW( p1.add_field<uint32_t>("third"));
+
+    std::cout << "source of the copy: " << p1  << "\n";
+
+    REQUIRE_NOTHROW( p.copy_fields(p1) );
+
+    REQUIRE_THROWS( p.copy_fields(p1) ); // all copied fields already exist..
+    REQUIRE (p.length() == len + p1.length() );
+
+    std::cout << "result:" << p;
+
 }

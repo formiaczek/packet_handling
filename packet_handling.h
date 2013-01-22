@@ -727,12 +727,6 @@ public:
             throw GenericException("Packet::%s(): field name is empty!", __FUNCTION__);
         }
 
-        if (fields.find(name) != fields.end())
-        {
-            throw GenericException("Packet::%s(): field \"%s\" already exists!", __FUNCTION__,
-                                   name.c_str());
-        }
-
         if (cur_length + length <= msg_buffer.max_length())
         {
             field_id = fields_by_id.size();
@@ -745,8 +739,14 @@ public:
             }
             else
             {
-                throw GenericException("Packet::%s(): Error while adding new field: \"%s\"",
-                                       __FUNCTION__, name.c_str(), length);
+                std::string msg;
+                if(fields.find(name) != fields.end())
+                {
+                    msg = "- field already exists";
+                }
+
+                throw GenericException("Packet::%s(): Error while adding new field: \"%s\" (size: %d) %s",
+                                       __FUNCTION__, name.c_str(), f.length, msg.c_str());
             }
         }
         else
@@ -757,93 +757,6 @@ public:
         return field_id;
     }
 
-
-    /**
-     @brief Gets a reference to a sub-packet for a field.
-            If sub-packet for this field does not exist yet, it will be created.
-     @param name_of_existing_field - name of an existing field. Field has to be of a pointer type.
-     @throws GenericException in following situations:
-       - specified field does not exist,
-       - specified field is not of a pointer type
-       - other error while adding a sub-packet (e.g. in OOM)
-     */
-    Packet& get_sub_packet(std::string name_of_existing_field)
-    {
-        std::map<std::string, PacketField>::iterator fi = fields.find(name_of_existing_field);
-        if (fi == fields.end())
-        {
-            throw GenericException("Packet::%s(): field \"%s\" does not exists!",
-                                   __FUNCTION__, name_of_existing_field.c_str());
-        }
-
-        PacketField& f = fi->second;
-        if (!f.is_pointer())
-        {
-            throw GenericException("Packet::%s() can only create a sub-packet for fields of pointer type.",
-                                   __FUNCTION__);
-        }
-
-        std::map<std::string, Packet>::iterator pi = sub_packets.find(name_of_existing_field);
-        if(pi == sub_packets.end())
-        {
-
-            Packet packet(msg_buffer.get_uint8_ptr(f.offset), f.length);
-            std::pair<typeof(pi), bool> res = sub_packets.insert(std::make_pair(name_of_existing_field, packet));
-            if(res.second)
-            {
-                pi = res.first;
-                pi->second.set_name("=== sub-packet ===");
-            }
-            else
-            {
-                throw GenericException("Packet::%s(): Error creating sub_packet for \"%s\"",
-                                       __FUNCTION__, name_of_existing_field.c_str());
-            }
-        }
-        return pi->second;
-    }
-
-
-    /**
-     * @brief Method to determine if a field has a sub-packet
-     */
-    bool has_sub_packet(std::string field_name)
-    {
-        return sub_packets.find(field_name) != sub_packets.end();
-    }
-
-    /**
-     @brief Returns the id (order number within the Packet) of the field.
-     @param  name: name of the field.
-     @param  no_throw: if specified - method returns -1 if field is not found.
-     @throws: Can throw GenericException in following situations:
-     - field is not found and no_throw was set to 0
-     - field being requested has a mismatched field_id with the one
-     that Packet is using to identify it within the vector.
-     */
-    uint32_t get_field_id(std::string name, uint32_t no_throw = 1)
-    {
-        uint32_t field_id = -1;
-        std::map<std::string, PacketField>::iterator i = fields.find(name);
-        if (i != fields.end())
-        {
-            field_id = i->second.field_id;
-            if (fields_by_id[field_id].field_id != field_id)
-            {
-                throw GenericException("Packet::%s(): field \"%s\" has wrong field_id!",
-                                       __FUNCTION__, name.c_str());
-            }
-        }
-        else
-        {
-            if (!no_throw)
-            {
-                throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
-                                       name.c_str());
-            }
-        }
-        return field_id;
-    }
 
     /**
      @brief Updates the value of the field.
@@ -1139,6 +1052,32 @@ public:
     }
 
     /**
+     @brief adjusts the maximum length of the buffer.
+            Use this method to setup a lower value of the maximum buffer size.
+     @param to_length - requested length. It it is bigger or equal to existing max_length,
+            max_length will not change.
+     */
+    void adjust_max_length(uint32_t to_length)
+    {
+        if(to_length < msg_buffer.max_length())
+        {
+            msg_buffer.setup_buffer(msg_buffer.get_buffer_addr(), to_length);
+        }
+    }
+
+    /**
+     @brief adjusts the maximum length of the buffer to the current length.
+            Use this method to setup the maximum buffer size to the current length.
+     */
+    void adjust_max_length()
+    {
+        if(cur_length < msg_buffer.max_length())
+        {
+            msg_buffer.setup_buffer(msg_buffer.get_buffer_addr(), cur_length);
+        }
+    }
+
+    /**
      @brief  returns name of this packet.
      */
     std::string name()
@@ -1153,6 +1092,146 @@ public:
     {
         packet_name = new_name;
     }
+
+    /**
+     @brief Gets a reference to a sub-packet for a field.
+            If sub-packet for this field does not exist yet, it will be created.
+     @param name_of_existing_field - name of an existing field. Field has to be of a pointer type.
+     @throws GenericException in following situations:
+       - specified field does not exist,
+       - specified field is not of a pointer type
+       - other error while adding a sub-packet (e.g. in OOM)
+     */
+    Packet& get_sub_packet(std::string name_of_existing_field)
+    {
+        std::map<std::string, PacketField>::iterator fi = fields.find(name_of_existing_field);
+        if (fi == fields.end())
+        {
+            throw GenericException("Packet::%s(): field \"%s\" does not exists!",
+                                   __FUNCTION__, name_of_existing_field.c_str());
+        }
+
+        PacketField& f = fi->second;
+        if (!f.is_pointer())
+        {
+            throw GenericException("Packet::%s() can only create a sub-packet for fields of pointer type.",
+                                   __FUNCTION__);
+        }
+
+        std::map<std::string, Packet>::iterator pi = sub_packets.find(name_of_existing_field);
+        if(pi == sub_packets.end())
+        {
+
+            Packet packet(msg_buffer.get_uint8_ptr(f.offset), f.length);
+            std::pair<typeof(pi), bool> res = sub_packets.insert(std::make_pair(name_of_existing_field, packet));
+            if(res.second)
+            {
+                pi = res.first;
+                pi->second.set_name("=== sub-packet ===");
+            }
+            else
+            {
+                throw GenericException("Packet::%s(): Error creating sub_packet for \"%s\"",
+                                       __FUNCTION__, name_of_existing_field.c_str());
+            }
+        }
+        return pi->second;
+    }
+
+    /**
+     * @brief Method to determine if a field has a sub-packet
+     */
+    bool has_sub_packet(std::string field_name)
+    {
+        return sub_packets.find(field_name) != sub_packets.end();
+    }
+
+    /**
+     @brief Returns the id (order number within the Packet) of the field.
+     @param  name: name of the field.
+     @param  no_throw: if specified - method returns -1 if field is not found.
+     @throws: Can throw GenericException in following situations:
+     - field is not found and no_throw was set to 0
+     - field being requested has a mismatched field_id with the one
+     that Packet is using to identify it within the vector.
+     */
+    uint32_t get_field_id(std::string name, uint32_t no_throw = 1)
+    {
+        uint32_t field_id = -1;
+        std::map<std::string, PacketField>::iterator i = fields.find(name);
+        if (i != fields.end())
+        {
+            field_id = i->second.field_id;
+            if (fields_by_id[field_id].field_id != field_id)
+            {
+                throw GenericException("Packet::%s(): field \"%s\" has wrong field_id!",
+                                       __FUNCTION__, name.c_str());
+            }
+        }
+        else
+        {
+            if (!no_throw)
+            {
+                throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
+                                       name.c_str());
+            }
+        }
+        return field_id;
+    }
+
+
+    /**
+     * @brief Copy fields of another packet into this packet.
+     * @param source_packet - All fields of this source packet will be appended to the current packet.
+     */
+    void copy_fields(Packet& source_packet)
+    {
+        std::vector<PacketField>::iterator fi;
+        std::map<std::string, PacketField>::iterator pi;
+
+        for(fi = source_packet.fields_by_id.begin(); fi != source_packet.fields_by_id.end(); fi++)
+        {
+            PacketField f = *fi; // local copy
+
+            // find name
+            for(pi = source_packet.fields.begin(); pi != source_packet.fields.end(); pi++)
+            {
+                if (pi->second.field_id == f.field_id)
+                {
+                    break;
+                }
+            }
+
+            if (cur_length + f.length <= msg_buffer.max_length())
+            {
+                uint32_t field_id = fields_by_id.size();
+                f.field_id = field_id; // adjust field_id
+                std::pair<std::map<std::string, PacketField>::iterator, bool> res = fields.insert(make_pair(pi->first, f));
+                if(res.second)
+                {
+                    cur_length += f.length;
+                    fields_by_id.push_back(f);
+                }
+                else
+                {
+                    std::string msg;
+                    if(fields.find(pi->first) != fields.end())
+                    {
+                        msg = "- field already exists";
+                    }
+
+                    throw GenericException("Packet::%s(): Error while adding new field: \"%s\" (size: %d) %s",
+                                           __FUNCTION__, pi->first.c_str(), f.length, msg.c_str());
+                }
+            }
+            else
+            {
+                throw GenericException("Packet::%s(): Current packet is too short to add new field: \"%s\" (size: %d)",
+                                       __FUNCTION__, pi->first.c_str(), f.length);
+            }
+        }
+    }
+
 
     /**
      * @brief  declaration of insert operator to dump Packet info.
