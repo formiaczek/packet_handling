@@ -643,6 +643,7 @@ public:
      @throws: Can throw GenericException (from PacketBuffer) if buffer_addr is NULL.
      */
     explicit Packet(void* buffer_addr, uint32_t buffer_size, uint32_t big_endian = 0) :
+                    verbose_print(false),
                     msg_buffer((uint8_t*)buffer_addr, buffer_size, big_endian), // can throw exception..
                     cur_length(0),
                     packet_name("(no name)")
@@ -653,6 +654,7 @@ public:
      @brief  Constructor.
      */
     explicit Packet() :
+                    verbose_print(false),
                     msg_buffer(NULL, 0),
                     cur_length(0),
                     packet_name("(no name)")
@@ -678,8 +680,8 @@ public:
         else
         {
             throw GenericException(
-                            "Packet::%s() parameter error(new_buffer: 0x%lx, buffer_size %d)",
-                            __FUNCTION__, new_buffer, buffer_size);
+                            "Packet(%s)::%s(): parameter error(new_buffer: 0x%lx, buffer_size %d)",
+                            packet_name.c_str(), __FUNCTION__, new_buffer, buffer_size);
         }
     }
 
@@ -701,8 +703,8 @@ public:
         if (msg_buffer.get_buffer_addr() == NULL)
         {
             throw GenericException(
-                            "Packet::%s() buffer is not set. Should call Packet::setup_buffer() before this method..",
-                            __FUNCTION__);
+                            "Packet(%s)::%s(): buffer is not set. Should call Packet::setup_buffer() before this method..",
+                            packet_name.c_str(), __FUNCTION__);
         }
 
         if (!is_pointer_type(T()))
@@ -717,14 +719,15 @@ public:
             if (length == 0)
             {
                 throw GenericException(
-                                "Packet::%s() field \"%s\": length is needed for pointer-type field",
-                                __FUNCTION__, name.c_str());
+                                "Packet(%s)::%s(): field \"%s\": length is needed for pointer-type field",
+                                packet_name.c_str(), __FUNCTION__, name.c_str());
             }
         }
 
         if (name.length() <= 0)
         {
-            throw GenericException("Packet::%s(): field name is empty!", __FUNCTION__);
+            throw GenericException("Packet(%s)::%s(): field name is empty!",
+                                   packet_name.c_str(), __FUNCTION__);
         }
 
         if (cur_length + length <= msg_buffer.max_length())
@@ -745,14 +748,14 @@ public:
                     msg = "- field already exists";
                 }
 
-                throw GenericException("Packet::%s(): Error while adding new field: \"%s\" (size: %d) %s",
-                                       __FUNCTION__, name.c_str(), f.length, msg.c_str());
+                throw GenericException("Packet(%s)::%s(): Error while adding new field: \"%s\" (size: 0x%x) %s",
+                                       packet_name.c_str(), __FUNCTION__, name.c_str(), f.length, msg.c_str());
             }
         }
         else
         {
-            throw GenericException("Packet::%s(): Packet too short to add new field: \"%s\" (size: %d)",
-                                   __FUNCTION__, name.c_str(), length);
+            throw GenericException("Packet(%s)::%s(): Packet is too short to add new field: \"%s\" (size: 0x%x)",
+                                   packet_name.c_str(), __FUNCTION__, name.c_str(), length);
         }
         return field_id;
     }
@@ -776,8 +779,8 @@ public:
         }
         else
         {
-            throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
-                                   name.c_str());
+            throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                   packet_name.c_str(), __FUNCTION__, name.c_str());
         }
     }
 
@@ -798,8 +801,8 @@ public:
         }
         else
         {
-            throw GenericException("Packet::%s(): field_index %d not found", __FUNCTION__,
-                                   field_id);
+            throw GenericException("Packet(%s)::%s(): field_index %d not found",
+                                   packet_name.c_str(), __FUNCTION__, field_id);
         }
     }
 
@@ -825,8 +828,8 @@ public:
             if (!f.is_pointer())
             {
                 throw GenericException(
-                                "Packet::%s(): wrong method for non-pointer type field (%s).",
-                                __FUNCTION__, name.c_str());
+                                "Packet(%s)::%s(): wrong method for non-pointer type field (%s).",
+                                packet_name.c_str(), __FUNCTION__, name.c_str());
             }
             uint8_t* dst_ptr = msg_buffer.get_uint8_ptr(f.offset);
             if (src != NULL)
@@ -841,8 +844,8 @@ public:
         }
         else
         {
-            throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
-                                   name.c_str());
+            throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                   packet_name.c_str(), __FUNCTION__, name.c_str());
         }
         return length_written;
     }
@@ -867,9 +870,8 @@ public:
             PacketField& f = fields_by_id[field_id];
             if (!f.is_pointer())
             {
-                throw GenericException(
-                                "Packet::%s(): wrong method for non-pointer type field (%d).",
-                                __FUNCTION__, field_id);
+                throw GenericException("Packet(%s)::%s(): wrong method for non-pointer type field (%d).",
+                                       packet_name.c_str(), __FUNCTION__, field_id);
             }
             uint8_t* dst_ptr = msg_buffer.get_uint8_ptr(f.offset);
             if (src != NULL)
@@ -884,8 +886,8 @@ public:
         }
         else
         {
-            throw GenericException("Packet::%s(): field_index %s not found", __FUNCTION__,
-                                   field_id);
+            throw GenericException("Packet(%s)::%s(): field_index %s not found",
+                                   packet_name.c_str(), __FUNCTION__, field_id);
         }
         return length_written;
     }
@@ -909,15 +911,15 @@ public:
             PacketField& f = i->second;
             if (f.is_pointer())
             {
-                throw GenericException("Packet::%s(): wrong method for pointer type field (%s).",
-                                       __FUNCTION__, name.c_str());
+                throw GenericException("Packet(%s)::%s(): wrong method for pointer type field (%s).",
+                                       packet_name.c_str(), __FUNCTION__, name.c_str());
             }
             val = (msg_buffer.*f.get_val)(f.offset);
         }
         else
         {
-            throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
-                                   name.c_str());
+            throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                   packet_name.c_str(), __FUNCTION__, name.c_str());
         }
         return val;
     }
@@ -940,15 +942,15 @@ public:
             PacketField& f = fields_by_id[field_id];
             if (f.is_pointer())
             {
-                throw GenericException("Packet::%s(): wrong method for pointer type field (%d).",
-                                       __FUNCTION__, field_id);
+                throw GenericException("Packet(%s)::%s(): wrong method for pointer type field (%d).",
+                                       packet_name.c_str(), __FUNCTION__, field_id);
             }
             val = (msg_buffer.*f.get_val)(f.offset);
         }
         else
         {
-            throw GenericException("Packet::%s(): field_index %s not found", __FUNCTION__,
-                                   field_id);
+            throw GenericException("Packet(%s)::%s(): field_index %s not found",
+                                   packet_name.c_str(), __FUNCTION__, field_id);
         }
         return val;
     }
@@ -975,8 +977,8 @@ public:
             if (!f.is_pointer())
             {
                 throw GenericException(
-                                "Packet::%s(): wrong method for non-pointer type field (%s).",
-                                __FUNCTION__, name.c_str());
+                                "Packet(%s)::%s(): wrong method for non-pointer type field (%s).",
+                                packet_name.c_str(), __FUNCTION__, name.c_str());
             }
             src_ptr = msg_buffer.get_uint8_ptr(f.offset);
             if(destination != NULL)
@@ -988,8 +990,8 @@ public:
         else
         {
 
-            throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
-                                   name.c_str());
+            throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                   packet_name.c_str(), __FUNCTION__, name.c_str());
         }
         return src_ptr;
     }
@@ -1001,10 +1003,11 @@ public:
      @throws: Can throw GenericException if following situations:
      - field does not exist in the Packet.
      - field is not of pointer type.
-     @return: Returns a pointer to the copied data.
+     @return: Returns a pointer to the original data (if destination was NULL) or to the copied data otherwise.
      */
     void* get_field(uint32_t field_id, void* destination)
     {
+        uint8_t* src_ptr = NULL;
         if (field_id < fields_by_id.size())
         {
             // call the method it points to to access the data
@@ -1012,19 +1015,90 @@ public:
             if (!f.is_pointer())
             {
                 throw GenericException(
-                                "Packet::%s(): wrong method for non-pointer type field (%d).",
-                                __FUNCTION__, field_id);
+                                "Packet(%s)::%s(): wrong method for non-pointer type field (%d).",
+                                packet_name.c_str(), __FUNCTION__, field_id);
             }
-            uint8_t* src_ptr = msg_buffer.get_uint8_ptr(f.offset);
-            memcpy(destination, src_ptr, f.length);
+
+            src_ptr = msg_buffer.get_uint8_ptr(f.offset);
+            if(destination != NULL)
+            {
+                memcpy(destination, src_ptr, f.length);
+                src_ptr = static_cast<uint8_t*>(destination); // return pointer to the copy
+            }
         }
         else
         {
-            throw GenericException("Packet::%s(): field_index %s not found", __FUNCTION__,
-                                   field_id);
+            throw GenericException("Packet(%s)::%s(): field_index %s not found",
+                                   packet_name.c_str(), __FUNCTION__, field_id);
         }
-        return destination;
+        return src_ptr;
     }
+
+    /**
+     @brief Method to check if a field exists in this packet.
+     @param name - name of the field.
+     @returns true - if exists, false otherwise.
+     */
+    bool field_exists(std::string name)
+    {
+        return fields.find(name) != fields.end();
+    }
+
+
+    /**
+     @brief Returns the id (order number within the Packet) of the field.
+     @param  name: name of the field.
+     @param  no_throw: if specified - method returns -1 if field is not found.
+     @throws: Can throw GenericException in following situations:
+     - field is not found and no_throw was set to 0
+     - field being requested has a mismatched field_id with the one
+     that Packet is using to identify it within the vector.
+     */
+    uint32_t get_field_id(std::string name, uint32_t no_throw = 1)
+    {
+        uint32_t field_id = ~0u;
+        std::map<std::string, PacketField>::iterator i = fields.find(name);
+        if (i != fields.end())
+        {
+            field_id = i->second.field_id;
+            if (fields_by_id[field_id].field_id != field_id)
+            {
+                throw GenericException("Packet(%s)::%s(), Packet \"%s\": field \"%s\" has wrong field_id!",
+                                       packet_name.c_str(), __FUNCTION__, name.c_str());
+            }
+        }
+        else
+        {
+            if (!no_throw)
+            {
+                throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                       packet_name.c_str(), __FUNCTION__, name.c_str());
+            }
+        }
+        return field_id;
+    }
+
+    /**
+     @brief Returns the offset at which this field starts within the Packet.
+     @param  field_name: name of the field.
+     @throws: Can throw GenericException if field is not found
+     */
+    uint32_t get_field_offset(std::string field_name)
+    {
+        uint32_t offset = 0;
+        std::map<std::string, PacketField>::iterator i = fields.find(field_name);
+        if (i != fields.end())
+        {
+            offset = i->second.offset;
+        }
+        else
+        {
+                throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                       packet_name.c_str(), __FUNCTION__, field_name.c_str());
+        }
+        return offset;
+    }
+
 
     /**
      @brief  Method for getting a pointer to the actual buffer holding the data.
@@ -1035,6 +1109,18 @@ public:
         return msg_buffer.get_buffer_addr();
     }
 
+
+    /**
+     @brief  Method for getting a pointer to the actual buffer holding the data.
+     (i.e. to be used for receiving / sending the data)
+     */
+    uint8_t* get_addr_for_next_field()
+    {
+        uint8_t* addr_for_next_field = msg_buffer.get_buffer_addr() + cur_length;
+        return addr_for_next_field;
+    }
+
+
     /**
      @brief  returns current length for the buffer.
      */
@@ -1043,6 +1129,7 @@ public:
         return cur_length;
     }
 
+
     /**
      @brief  returns maximum length for the buffer.
      */
@@ -1050,6 +1137,16 @@ public:
     {
         return msg_buffer.max_length();
     }
+
+
+    /**
+     @brief  returns bytes that are available in this packet (as specified by a buffer constraints).
+     */
+    uint32_t bytes_left()
+    {
+        return msg_buffer.max_length() - cur_length;
+    }
+
 
     /**
      @brief adjusts the maximum length of the buffer.
@@ -1065,6 +1162,7 @@ public:
         }
     }
 
+
     /**
      @brief adjusts the maximum length of the buffer to the current length.
             Use this method to setup the maximum buffer size to the current length.
@@ -1077,6 +1175,7 @@ public:
         }
     }
 
+
     /**
      @brief  returns name of this packet.
      */
@@ -1084,6 +1183,7 @@ public:
     {
         return packet_name;
     }
+
 
     /**
      @brief  sets name of this packet.
@@ -1102,37 +1202,37 @@ public:
        - specified field is not of a pointer type
        - other error while adding a sub-packet (e.g. in OOM)
      */
-    Packet& get_sub_packet(std::string name_of_existing_field)
+    Packet& sub_packet(std::string name_of_existing_field)
     {
         std::map<std::string, PacketField>::iterator fi = fields.find(name_of_existing_field);
         if (fi == fields.end())
         {
-            throw GenericException("Packet::%s(): field \"%s\" does not exists!",
-                                   __FUNCTION__, name_of_existing_field.c_str());
+            throw GenericException("Packet(%s)::%s(): field \"%s\" does not exists!",
+                                   packet_name.c_str(), __FUNCTION__, name_of_existing_field.c_str());
         }
 
         PacketField& f = fi->second;
         if (!f.is_pointer())
         {
-            throw GenericException("Packet::%s() can only create a sub-packet for fields of pointer type.",
-                                   __FUNCTION__);
+            throw GenericException("Packet(%s)::%s(): can only create a sub-packet for fields of pointer type.",
+                                   packet_name.c_str(), __FUNCTION__);
         }
 
+        typedef std::map<std::string, Packet>::iterator fields_iterator;
         std::map<std::string, Packet>::iterator pi = sub_packets.find(name_of_existing_field);
         if(pi == sub_packets.end())
         {
-
             Packet packet(msg_buffer.get_uint8_ptr(f.offset), f.length);
-            std::pair<typeof(pi), bool> res = sub_packets.insert(std::make_pair(name_of_existing_field, packet));
+            std::pair<fields_iterator, bool> res = sub_packets.insert(std::make_pair(name_of_existing_field, packet));
             if(res.second)
             {
                 pi = res.first;
-                pi->second.set_name("=== sub-packet ===");
+                pi->second.set_name("");
             }
             else
             {
-                throw GenericException("Packet::%s(): Error creating sub_packet for \"%s\"",
-                                       __FUNCTION__, name_of_existing_field.c_str());
+                throw GenericException("Packet(%s)::%s(): Error creating sub_packet for \"%s\"",
+                                       packet_name.c_str(), __FUNCTION__, name_of_existing_field.c_str());
             }
         }
         return pi->second;
@@ -1143,40 +1243,12 @@ public:
      */
     bool has_sub_packet(std::string field_name)
     {
-        return sub_packets.find(field_name) != sub_packets.end();
-    }
-
-    /**
-     @brief Returns the id (order number within the Packet) of the field.
-     @param  name: name of the field.
-     @param  no_throw: if specified - method returns -1 if field is not found.
-     @throws: Can throw GenericException in following situations:
-     - field is not found and no_throw was set to 0
-     - field being requested has a mismatched field_id with the one
-     that Packet is using to identify it within the vector.
-     */
-    uint32_t get_field_id(std::string name, uint32_t no_throw = 1)
-    {
-        uint32_t field_id = -1;
-        std::map<std::string, PacketField>::iterator i = fields.find(name);
-        if (i != fields.end())
+        bool result = false;
+        if(sub_packets.size() && field_name.size())
         {
-            field_id = i->second.field_id;
-            if (fields_by_id[field_id].field_id != field_id)
-            {
-                throw GenericException("Packet::%s(): field \"%s\" has wrong field_id!",
-                                       __FUNCTION__, name.c_str());
-            }
+            result = sub_packets.find(field_name) != sub_packets.end();
         }
-        else
-        {
-            if (!no_throw)
-            {
-                throw GenericException("Packet::%s(): field \"%s\" not found", __FUNCTION__,
-                                       name.c_str());
-            }
-        }
-        return field_id;
+        return result;
     }
 
 
@@ -1220,13 +1292,13 @@ public:
                         msg = "- field already exists";
                     }
 
-                    throw GenericException("Packet::%s(): Error while adding new field: \"%s\" (size: %d) %s",
+                    throw GenericException("Packet::%s(): Error while adding new field: \"%s\" (size: 0x%x) %s",
                                            __FUNCTION__, pi->first.c_str(), f.length, msg.c_str());
                 }
             }
             else
             {
-                throw GenericException("Packet::%s(): Current packet is too short to add new field: \"%s\" (size: %d)",
+                throw GenericException("Packet::%s(): Current packet is too short to add new field: \"%s\" (size: 0x%x)",
                                        __FUNCTION__, pi->first.c_str(), f.length);
             }
         }
@@ -1234,11 +1306,74 @@ public:
 
 
     /**
+     * @brief Changes the name of a valid field.
+     * @param old_name - name of the existing field. This field should exist in this packet.
+     * @param new_name - new name for the selected field. Note, that field_id does not change, and old
+     *                   name will not be available if this method executes correctly.
+     * @throws GenericException if the original field does not exist or if the new one couldn't be added.
+     */
+    void rename_field(std::string old_name, std::string new_name)
+    {
+        std::map<std::string, PacketField>::iterator pi;
+
+
+        pi = fields.find(old_name);
+        if(pi == fields.end())
+        {
+            throw GenericException("Packet::%s(): Error, field: \"%s\" does not exist.", __FUNCTION__, old_name.c_str());
+        }
+
+
+        PacketField f = pi->second; // local copy
+
+        std::pair<std::map<std::string, PacketField>::iterator, bool> res = fields.insert(make_pair(new_name, f));
+        if(!res.second)
+        {
+            std::string msg = "other error?";
+            if(fields.find(new_name) != fields.end())
+            {
+                msg = "- field already exists";
+            }
+
+            throw GenericException("Packet::%s(): Error when adding new field: \"%s\" %s",
+                                   __FUNCTION__, new_name.c_str(), msg.c_str());
+        }
+
+        // only erase it when everything is OK
+        fields.erase(pi); // (pi is valid: "only iterators and references to the erased elements are invalidated [23.2.4/9])
+    }
+
+
+
+    /**
      * @brief  declaration of insert operator to dump Packet info.
      */
     friend std::ostream& operator<<(std::ostream &out, Packet& m);
 
+
+    void set_formatting_prefix(std::string prefix)
+    {
+        formatting_prefix = prefix;
+    }
+
+    void set_verbose()
+    {
+         verbose_print = true;
+    }
+
+    void clear_verbose()
+    {
+        verbose_print = false;
+    }
+
+    bool verbose()
+    {
+        return verbose_print;
+    }
+
 private:
+    bool verbose_print;
+    std::string formatting_prefix;
     PacketBuffer msg_buffer;
     uint32_t cur_length;
     std::string packet_name;
@@ -1252,6 +1387,8 @@ private:
  */
 inline std::ostream& operator<<(std::ostream &out,  Packet& m)
 {
+    const uint32_t default_prefix_size = 2;
+
     std::map<std::string, PacketField>::iterator f;
     std::vector<PacketField>::iterator i;
 
@@ -1263,12 +1400,12 @@ inline std::ostream& operator<<(std::ostream &out,  Packet& m)
     max_name_len++;
 
     // print name and length
-
     out << "\n";
+    std::string prefix = m.formatting_prefix;
     if(m.name().size() > 0)
     {
-        out << m.name();
-        out << " (length: " << std::hex << std::showbase << m.length() << "):\n\n";
+        out << prefix << m.name();
+        out << ", total size: " << std::hex << std::showbase << m.length() << " :\n\n";
     }
 
     for (i = m.fields_by_id.begin(); i != m.fields_by_id.end(); i++)
@@ -1282,47 +1419,46 @@ inline std::ostream& operator<<(std::ostream &out,  Packet& m)
             }
         }
 
-        if (false) // TODO:verbose)
+        if (m.verbose())
         {
-            out << "--\n";
-            out << "name:   " << f->first << std::endl;
-            out << "id:     " << i->field_id << std::endl;
-            out << "type:   " << i->type_name() << std::endl;
-            out << "offset: " << i->offset << std::endl;
-            out << "length: " << i->length << std::endl;
-            out << "value";
+            out << prefix << "--\n";
+            out << prefix << "name:   " << f->first << std::endl;
+            out << prefix << "id:     " << i->field_id << std::endl;
+            out << prefix << "type:   " << i->type_name() << std::endl;
+            out << prefix << "offset: " << i->offset << std::endl;
+            out << prefix << "length: " << i->length << std::endl;
+            out << prefix << "value";
         }
         else
         {
-            out << f->first;
-            out << std::string(max_name_len - f->first.length(), ' ');
+            out << prefix << f->first;
+            out << prefix << std::string(max_name_len - f->first.length(), ' ');
         }
 
         if (i->is_pointer())
         {
             uint8_t* vals = m.msg_buffer.get_uint8_ptr(i->offset);
-            if (false) // TODO: verbose)
-            {
-                printf("s");
-            }
-            out << ": (size " << std::hex << std::showbase << i->length << "): ";
+            out << prefix <<  ": (size " << std::hex << std::showbase << i->length << "): ";
 
             if(m.has_sub_packet(f->first))
             {
-                out << ", containing:";
-                out << m.get_sub_packet(f->first);
-                out << "=== sub-packet end ===";
+                Packet& sub = m.sub_packet(f->first);
+                sub.set_formatting_prefix(m.formatting_prefix + std::string(default_prefix_size, ' '));
+                out << sub;
             }
             else
             {
-                std::string vals_s;
-                for (uint32_t a = 0; a < i->length; a++)
+                std::string vals_s(default_prefix_size, ' ');
+                if( i->length > 15)
                 {
-                    out << std::hex << std::noshowbase << std::setw(2) << std::setfill('0') << (uint32_t)vals[a] << " ";
-                    if((a >= 15) && !(a%16 - 15))
-                    {
-                        out << "\n" << std::string(max_name_len + 15, ' ');
-                    }
+                    out << "\n" << prefix << std::string(max_name_len + 15, ' ');
+                }
+                uint32_t a;
+                for (a = 0; a < i->length; a++)
+                {
+                    out << std::hex << std::noshowbase << std::setw(2)
+                        << std::setfill('0') << (uint32_t)vals[a] << " ";
+
                     char to_put = vals[a];
                     if(to_put < 32 || to_put > 126)
                     {
@@ -1330,20 +1466,32 @@ inline std::ostream& operator<<(std::ostream &out,  Packet& m)
                     }
                     vals_s.push_back(to_put);
 
+                    if((a >= 15) && !(a%16 - 15))
+                    {
+                        out << vals_s;
+                        vals_s.clear();
+                        vals_s += "  ";
+                        if(a < i->length - 1)
+                        {
+                            out << "\n" << prefix << std::string(max_name_len + 15, ' ');
+                        }
+                    }
                     if(a > 62)
                     {
                         out << " (..skipping the rest of data..) ";
                         break;
                     }
                 }
-                // try to print it all (perhaps it's a string?)
-                out << "\n" << std::string(max_name_len + 15, ' ');
-                out << "(" << vals_s << ")";
+                if(vals_s.size() > 2)
+                {
+                    // print the remaining values (if they haven't been yet)..
+                    out << std::string(3 * (16 - (a%16)), ' ') << vals_s;
+                }
             }
         }
         else
         {
-            out << ": " << std::hex << std::showbase << m.get_field(i->field_id);
+            out << prefix << ": " << std::hex << std::showbase << m.get_field(i->field_id);
         }
         out << std::endl;
     }
