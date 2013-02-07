@@ -99,6 +99,7 @@
 #include <exception>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 #ifdef _MSC_VER
 #define VSNPRINTF(dest, max_len, format, vargs) vsnprintf_s(dest, max_len, max_len, format, vargs)
@@ -697,7 +698,7 @@ public:
      - Packet has no more space for the field being added.
      */
     template<typename T>
-    int add_field(std::string name, uint32_t length = 0)
+    int add_field(const std::string& name, uint32_t length = 0)
     {
         uint32_t field_id = -1;
         if (msg_buffer.get_buffer_addr() == NULL)
@@ -768,7 +769,7 @@ public:
      @throws: Can throw GenericException if following situations:
      - field does not exist in the Packet.
      */
-    void set_field(std::string name, uint32_t value)
+    void set_field(const std::string& name, uint32_t value)
     {
         std::map<std::string, PacketField>::iterator i = fields.find(name);
         if (i != fields.end())
@@ -817,7 +818,8 @@ public:
      - field is not of pointer type.
      @return: Returns the length of data (in bytes) that was copied to the Packet.
      */
-    uint32_t set_field(std::string name, const char* src)
+    template <typename T>
+    uint32_t set_field(const std::string& name, const T* src)
     {
         uint32_t length_written = 0;
         std::map<std::string, PacketField>::iterator i = fields.find(name);
@@ -861,7 +863,8 @@ public:
      - field is not of pointer type.
      @return: Returns the length of data (in bytes) that was copied to the Packet.
      */
-    uint32_t set_field(uint32_t field_id, const char* src)
+    template <class T>
+    uint32_t set_field(uint32_t field_id, const T* src)
     {
         uint32_t length_written = 0;
         if (field_id < fields_by_id.size())
@@ -901,7 +904,7 @@ public:
      overloads of this method.
      @return: Returns the actual value for this field.
      */
-    uint32_t get_field(std::string name)
+    uint32_t get_field(const std::string& name)
     {
         uint32_t val = 0;
         std::map<std::string, PacketField>::iterator i = fields.find(name);
@@ -966,7 +969,7 @@ public:
      - field is not of pointer type.
      @return: Returns a pointer to the original data (if destination was NULL) or to the copied data otherwise.
      */
-    void* get_field(std::string name, void* destination)
+    void* get_field(const std::string& name, void* destination)
     {
         uint8_t* src_ptr = NULL;
         std::map<std::string, PacketField>::iterator i = fields.find(name);
@@ -1039,7 +1042,7 @@ public:
      @param name - name of the field.
      @returns true - if exists, false otherwise.
      */
-    bool field_exists(std::string name)
+    bool field_exists(const std::string& name)
     {
         return fields.find(name) != fields.end();
     }
@@ -1054,7 +1057,7 @@ public:
      - field being requested has a mismatched field_id with the one
      that Packet is using to identify it within the vector.
      */
-    uint32_t get_field_id(std::string name, uint32_t no_throw = 1)
+    uint32_t get_field_id(const std::string& name, uint32_t no_throw = 1)
     {
         uint32_t field_id = ~0u;
         std::map<std::string, PacketField>::iterator i = fields.find(name);
@@ -1083,7 +1086,7 @@ public:
      @param  field_name: name of the field.
      @throws: Can throw GenericException if field is not found
      */
-    uint32_t get_field_offset(std::string field_name)
+    uint32_t get_field_offset(const std::string& field_name)
     {
         uint32_t offset = 0;
         std::map<std::string, PacketField>::iterator i = fields.find(field_name);
@@ -1188,7 +1191,7 @@ public:
     /**
      @brief  sets name of this packet.
      */
-    void set_name(std::string new_name)
+    void set_name(const std::string& new_name)
     {
         packet_name = new_name;
     }
@@ -1202,7 +1205,7 @@ public:
        - specified field is not of a pointer type
        - other error while adding a sub-packet (e.g. in OOM)
      */
-    Packet& sub_packet(std::string name_of_existing_field)
+    Packet& sub_packet(const std::string& name_of_existing_field)
     {
         std::map<std::string, PacketField>::iterator fi = fields.find(name_of_existing_field);
         if (fi == fields.end())
@@ -1241,7 +1244,7 @@ public:
     /**
      * @brief Method to determine if a field has a sub-packet
      */
-    bool has_sub_packet(std::string field_name)
+    bool has_sub_packet(const std::string& field_name)
     {
         bool result = false;
         if(sub_packets.size() && field_name.size())
@@ -1312,20 +1315,16 @@ public:
      *                   name will not be available if this method executes correctly.
      * @throws GenericException if the original field does not exist or if the new one couldn't be added.
      */
-    void rename_field(std::string old_name, std::string new_name)
+    void rename_field(const std::string& old_name, const std::string& new_name)
     {
         std::map<std::string, PacketField>::iterator pi;
-
-
         pi = fields.find(old_name);
         if(pi == fields.end())
         {
             throw GenericException("Packet::%s(): Error, field: \"%s\" does not exist.", __FUNCTION__, old_name.c_str());
         }
 
-
         PacketField f = pi->second; // local copy
-
         std::pair<std::map<std::string, PacketField>::iterator, bool> res = fields.insert(make_pair(new_name, f));
         if(!res.second)
         {
@@ -1343,29 +1342,43 @@ public:
         fields.erase(pi); // (pi is valid: "only iterators and references to the erased elements are invalidated [23.2.4/9])
     }
 
-
-
     /**
      * @brief  declaration of insert operator to dump Packet info.
      */
     friend std::ostream& operator<<(std::ostream &out, Packet& m);
 
 
+    /**
+     * @brief sets a formatting prefix string.
+     *        This prefix will be placed at the beginning of each line
+     *        printed by the insert operator (<<).
+     * @param prefix string to be used as prefix.
+     */
     void set_formatting_prefix(std::string prefix)
     {
         formatting_prefix = prefix;
     }
 
+    /**
+     * @brief sets the verbose flag. This will cause that
+     *        operator (<<) will insert more information about the packet.
+     */
     void set_verbose()
     {
          verbose_print = true;
     }
 
+    /**
+     * @brief Clears the ferbose flag.
+     */
     void clear_verbose()
     {
         verbose_print = false;
     }
 
+    /**
+     * @brief Returns the status of the verbose flag.
+     */
     bool verbose()
     {
         return verbose_print;
@@ -1383,7 +1396,7 @@ private:
 };
 
 /**
- * @brief  insert operator to dump Packet info.
+ * @brief  insert operator to dump Packet information in some more formatted way.
  */
 inline std::ostream& operator<<(std::ostream &out,  Packet& m)
 {
@@ -1395,7 +1408,7 @@ inline std::ostream& operator<<(std::ostream &out,  Packet& m)
     size_t max_name_len = 0;
     for(f = m.fields.begin(); f != m.fields.end(); f++)
     {
-        max_name_len = std::max(max_name_len, f->first.length());
+        max_name_len = (std::max)(max_name_len, f->first.length());
     }
     max_name_len++;
 

@@ -115,7 +115,7 @@ TEST_CASE( "Use strings in packets", "Should be able to use string fields in pac
 
     REQUIRE_NOTHROW(new_from_m.get_field("name", buf));
     REQUIRE(std::string(buf) == "John Doe");
-    REQUIRE(std::string("John Doe") == static_cast<char*>(new_from_m.get_field("name", (char*)NULL) ));
+    REQUIRE(std::string("John Doe") == static_cast<char*>(new_from_m.get_field("name", NULL) ));
 
     std::cout << new_from_m << std::endl;
 }
@@ -153,12 +153,12 @@ TEST_CASE( "test sub-packets", "Should be able handle sub-packets correctly" )
     REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
     REQUIRE_NOTHROW( p.set_field("full_name", (char*)NULL) );
 
-    REQUIRE_THROWS( p.get_sub_packet("nonexisting")); // cant' create packet for non-existing field..
-    REQUIRE_THROWS( p.get_sub_packet("non_pointer")); // cant' create packet for non-pointer field..
+    REQUIRE_THROWS( p.sub_packet("nonexisting")); // cant' create packet for non-existing field..
+    REQUIRE_THROWS( p.sub_packet("non_pointer")); // cant' create packet for non-pointer field..
 
-    REQUIRE_NOTHROW( p.get_sub_packet("full_name")); // OK
+    REQUIRE_NOTHROW( p.sub_packet("full_name")); // OK
 
-    Packet& sub = p.get_sub_packet("full_name"); // second time should just return it
+    Packet& sub = p.sub_packet("full_name"); // second time should just return it
 
     // confirm it's OK and boundaries do not exceed the original field
     REQUIRE( sub.get_buffer_addr() == p.get_field("full_name", NULL) ); // should point at the original field
@@ -180,12 +180,12 @@ TEST_CASE( "test sub-packets- adjust max size", "Adjusting maximum size." )
     REQUIRE_NOTHROW( p.add_field<int>("non_pointer") );
     REQUIRE_NOTHROW( p.set_field("full_name", (char*)NULL) );
 
-    REQUIRE_THROWS( p.get_sub_packet("nonexisting")); // cant' create packet for non-existing field..
-    REQUIRE_THROWS( p.get_sub_packet("non_pointer")); // cant' create packet for non-pointer field..
+    REQUIRE_THROWS( p.sub_packet("nonexisting")); // cant' create packet for non-existing field..
+    REQUIRE_THROWS( p.sub_packet("non_pointer")); // cant' create packet for non-pointer field..
 
-    REQUIRE_NOTHROW( p.get_sub_packet("full_name")); // OK
+    REQUIRE_NOTHROW( p.sub_packet("full_name")); // OK
 
-    Packet& sub = p.get_sub_packet("full_name"); // second time should just return it
+    Packet& sub = p.sub_packet("full_name"); // second time should just return it
 
     // confirm it's OK and boundaries do not exceed the original field
     REQUIRE( sub.get_buffer_addr() == p.get_field("full_name", NULL) ); // should point at the original field
