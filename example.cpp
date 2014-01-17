@@ -49,21 +49,21 @@ void simple_example()
 void other_example()
 {
     std::cout << __FUNCTION__ << ":\n";
-    const unsigned int total_size = 64;
+    const unsigned int total_size = 54;
     char* buffer = new char[total_size];
     memset(buffer, 0, total_size);
 
     Packet all(buffer, total_size);
     all.set_name("Flat data packet");
-    all.add_field<char*> ("payload", 32); // create one field, 32 bytes long..
+    all.add_field<char*> ("payload", all.bytes_left()); // create one field only with remaining space
 
     // packet is just a way of interpreting / using the data- there could be more packetso
     // to interpret the same buffer
     Packet car(buffer, total_size);
     car.set_name("CAR");
 
-    car.add_field<char*>("make",   10); // make up to 15 chars
-    car.add_field<char*>("model",   10); //
+    car.add_field<char*>("make", 9); // 9 bytes for make
+    car.add_field<char*>("model", 9);
 
     car.add_field<int>("prod_year");
     car.add_field<char*>("engine", 27);
@@ -133,10 +133,11 @@ Reset Config : 0
 
 other_example:
 
-CAR, total size: 0x33 :
 
-make      : (size 0xa): 50 6f 72 73 68 65 00 00 00 00                     Porshe....
-model     : (size 0xa): 39 31 31 20 47 54 31 00 00 00                     911 GT1...
+CAR, total size: 0x31 :
+
+make      : (size 0x9): 50 6f 72 73 68 65 00 00 00                        Porshe...
+model     : (size 0x9): 39 31 31 20 47 54 31 00 00                        911 GT1..
 prod_year : 0x7d8
 engine    : (size 0x1b):
   type        : (size 0x8): 66 6c 61 74 2d 36 00 00                           flat-6..
@@ -149,11 +150,14 @@ engine    : (size 0x1b):
 
 
 
-Flat data packet, total size: 0x20 :
 
-payload : (size 0x20):
-                       50 6f 72 73 68 65 00 00 00 00 39 31 31 20 47 54   Porshe....911 GT
-                       31 00 00 00 d8 07 00 00 66 6c 61 74 2d 36 00 00   1.......flat-6..
+Flat data packet, total size: 0x36 :
+
+payload : (size 0x36):
+                       50 6f 72 73 68 65 00 00 00 39 31 31 20 47 54 31   Porshe...911 GT1
+                       00 00 d8 07 00 00 66 6c 61 74 2d 36 00 00 45 74   ......flat-6..Et
+                       68 61 6e 6f 6c 00 00 00 00 20 02 bf 00 06 00 00   hanol.... ......
+                       00 00 00 00 00 00                                 ......
 
  */
 

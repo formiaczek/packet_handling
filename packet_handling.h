@@ -120,7 +120,7 @@ public:
     /**
      @brief  Overloaded constructor. Use it as printf() for exceptions..
      */
-    GenericException(const std::string& format,  ...)
+    GenericException(std::string format, ...)
     {
         if(format.length() > 0)
         {
@@ -138,7 +138,6 @@ public:
     {
         return msg;
     }
-
 protected:
     enum constants
     {
@@ -353,7 +352,7 @@ public:
      pointers set to point at this method.
      @param   offset: offset from the beginning of the buffer.
      */
-    uint32_t dummy_get(uint32_t offset)
+    uint32_t dummy_get(uint32_t /*offset*/)
     {
         // assertion here perhaps?
         return 0;
@@ -364,7 +363,7 @@ public:
      pointers set to point at this method.
      @param   offset: offset from the beginning of the buffer.
      */
-    uint8_t* dummy_ptr(uint32_t offset)
+    uint8_t* dummy_ptr(uint32_t /*offset*/)
     {
         // assertion here perhaps?
         return NULL;
@@ -375,7 +374,7 @@ public:
      pointers set to point at this method.
      @param   offset: offset from the beginning of the buffer.
      */
-    uint32_t dummy_set(uint32_t offset, uint32_t value)
+    uint32_t dummy_set(uint32_t /*offset*/, uint32_t /*value*/)
     {
         //assertion here perhaps?
         return 0;
@@ -820,7 +819,7 @@ public:
      @return: Returns the length of data (in bytes) that was copied to the Packet.
      */
     template <typename T>
-    uint32_t set_field(const std::string& name, const T* src)
+    uint32_t set_field(const std::string& name, const T* src, int src_len=-1)
     {
         uint32_t length_written = 0;
         std::map<std::string, PacketField>::iterator i = fields.find(name);
@@ -835,15 +834,29 @@ public:
                                 packet_name.c_str(), __FUNCTION__, name.c_str());
             }
             uint8_t* dst_ptr = msg_buffer.get_uint8_ptr(f.offset);
-            if (src != NULL)
+            if(src_len > 0)
             {
-                memcpy(dst_ptr, src,  f.length);
+                if(static_cast<uint32_t>(src_len) > f.length)
+                {
+                    throw GenericException(
+                                    "Packet(%s)::%s(): specified src_len (%d) is invalid.",
+                                    packet_name.c_str(), __FUNCTION__, src_len);
+                }
             }
             else
             {
-                memset(dst_ptr, 0u, f.length);
+                src_len = f.length;
             }
-            length_written = f.length;
+
+            if (src != NULL)
+            {
+                memcpy(dst_ptr, src,  src_len);
+            }
+            else
+            {
+                memset(dst_ptr, 0u, src_len);
+            }
+            length_written = src_len;
         }
         else
         {
@@ -1103,6 +1116,26 @@ public:
         return offset;
     }
 
+    /**
+     @brief Returns the length of a field.
+     @param  field_name: name of the field.
+     @throws: Can throw GenericException if field is not found
+     */
+    uint32_t get_field_length(const std::string& field_name)
+    {
+        uint32_t length = 0;
+        std::map<std::string, PacketField>::iterator i = fields.find(field_name);
+        if (i != fields.end())
+        {
+            length = i->second.length;
+        }
+        else
+        {
+                throw GenericException("Packet(%s)::%s(): field \"%s\" not found",
+                                       packet_name.c_str(), __FUNCTION__, field_name.c_str());
+        }
+        return length;
+    }
 
     /**
      @brief  Method for getting a pointer to the actual buffer holding the data.
