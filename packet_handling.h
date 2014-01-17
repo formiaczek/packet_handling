@@ -120,7 +120,7 @@ public:
     /**
      @brief  Overloaded constructor. Use it as printf() for exceptions..
      */
-    GenericException(std::string format, ...)
+    GenericException(const std::string& format,  ...)
     {
         if(format.length() > 0)
         {
@@ -138,6 +138,7 @@ public:
     {
         return msg;
     }
+
 protected:
     enum constants
     {

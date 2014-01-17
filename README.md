@@ -64,7 +64,28 @@ Refer to in-source documentation and examples for more information.
  gps_id_128.set_field("Time of Week", 0xffeb3fe3); // to set the field.
 
  // or by id:
- gps_id_128.set_field(7, 2); // id == 7 for channels */
+ gps_id_128.set_field(7, 2); // id == 7 for channels
+ gps_id_128.set_field(1, 2); // id == 2 for ECEF X
+
+ std::cout << gps_id_128 << "\n"; // can also print it out..
+/* Example output:
+
+ GPS 128, total size: 0x19 :
+
+ Packet ID    : 0
+ ECEF X       : 0x2
+ ECEF Y       : 0
+ ECEF Z       : 0
+ Clock Offset : 0
+ Time of Week : 0xffeb3fe3
+ Week Number  : 0
+ Channels     : 0x2
+ Reset Config : 0
+ */
+
 ```
+
+ See example.cpp for another example with sub-packets etc.
+
 
 
