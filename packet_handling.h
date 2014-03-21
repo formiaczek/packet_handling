@@ -94,6 +94,7 @@
 #include <stdio.h>
 
 #include <typeinfo>
+#include <cxxabi.h>
 #include <stdarg.h>
 #include <cstring>
 #include <exception>
@@ -1418,6 +1419,109 @@ public:
         return verbose_print;
     }
 
+    std::ostream& to_json(std::ostream& out)
+    {
+        std::map<std::string, PacketField>::iterator f;
+        std::vector<PacketField>::iterator i;
+
+        // print name and length
+        out << "{";
+        std::string prefix = formatting_prefix;
+        if(name().size() > 0)
+        {
+            out << prefix << "\"name\": \"" << name() << "\"";
+            out << ", \"total_size\": " << std::dec << length() << ", ";
+        }
+
+        out << "\"fields\": [";
+        for (i = fields_by_id.begin(); i != fields_by_id.end(); i++)
+        {
+            for (f = fields.begin(); f != fields.end(); f++)
+            {
+                if (f->second.field_id == i->field_id)
+                {
+                    break;
+                }
+            }
+
+            if(i != fields_by_id.begin())
+            {
+                out << ", ";
+            }
+
+            if (verbose())
+            {
+                out << prefix << "{";
+                out << prefix << "\"name\": \"" << f->first << "\", ";
+//                out << prefix << "\"id\":     " << i->field_id << std::endl;
+                if(i->type)
+                {
+
+                }
+                const char* type_mangled = i->type_name();
+                if(type_mangled)
+                {
+                    int status;
+                    const char* type_name = abi::__cxa_demangle(type_mangled, 0, 0, &status);
+                    if(type_name)
+                    {
+                        out << prefix << "\"type\": \"" << type_name << "\", ";
+                        free((void*)type_name);
+                    }
+                }
+//                out << prefix << "\"offset\": " << i->offset << std::endl;
+                out << prefix << "\"length\": " << i->length << ", ";
+                out << prefix << "\"value\": ";
+            }
+            else
+            {
+                out << prefix << "\"" << f->first << "\": ";
+            }
+
+            if (i->is_pointer())
+            {
+                uint8_t* vals = msg_buffer.get_uint8_ptr(i->offset);
+
+                if(has_sub_packet(f->first))
+                {
+                    Packet& sub = sub_packet(f->first);
+                    sub.set_formatting_prefix(formatting_prefix);
+                    sub.to_json(out);
+                }
+                else
+                {
+                    out << "\"" << std::string((const char*)vals, i->length) << "\""; // will have spaces as a fill
+#if 0 // todo: could do it in utf8 if it's a binary (non-ascii) data
+                    out << "[";
+                    uint32_t a;
+                    for (a = 0; a < i->length; a++)
+                    {
+                        out << std::hex << std::noshowbase << std::setw(2)
+                            << std::setfill('0') << (uint32_t)vals[a];
+                        if(a < i->length-1)
+                        {
+                           out << ", ";
+                        }
+                    }
+                    out << "]";
+#endif
+                }
+            }
+            else
+            {
+                out << prefix << std::dec << get_field(i->field_id);
+            }
+
+            if (verbose())
+            {
+                out << "}";
+            }
+        }
+
+        out << "]}";
+        return out;
+    }
+
 private:
     bool verbose_print;
     std::string formatting_prefix;
@@ -1471,7 +1575,17 @@ inline std::ostream& operator<<(std::ostream &out,  Packet& m)
             out << prefix << "--\n";
             out << prefix << "name:   " << f->first << std::endl;
             out << prefix << "id:     " << i->field_id << std::endl;
-            out << prefix << "type:   " << i->type_name() << std::endl;
+            const char* type_mangled = i->type_name();
+            if(type_mangled)
+            {
+                int status;
+                const char* type_name = abi::__cxa_demangle(type_mangled, 0, 0, &status);
+                if(type_name)
+                {
+                    out << prefix << "type:   " << type_name << std::endl;
+                    free((void*)type_name);
+                }
+            }
             out << prefix << "offset: " << i->offset << std::endl;
             out << prefix << "length: " << i->length << std::endl;
             out << prefix << "value";

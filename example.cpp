@@ -39,6 +39,9 @@ void simple_example()
 
     std::cout << gps_id_128 << "\n"; // can also print it out..
 
+    gps_id_128.set_verbose();
+    gps_id_128.to_json(std::cout);
+
     // can now do whatever is needed with the buffer.. 
 
     delete [] buffer;
@@ -48,7 +51,7 @@ void simple_example()
 
 void other_example()
 {
-    std::cout << __FUNCTION__ << ":\n";
+    std::cout << "\n" << __FUNCTION__ << ":\n";
     const unsigned int total_size = 54;
     char* buffer = new char[total_size];
     memset(buffer, 0, total_size);
@@ -98,6 +101,8 @@ void other_example()
     std::cout << "\n" << car << "\n"; // again will nicely format the output..
 
     std::cout << all << "\n"; // print the whole payload data..
+
+    car.to_json(std::cout);
 
     // (probably car is not the best example here, but analysing data that would have sub-packets for different payload
     // can be convenient for debugging etc..)
