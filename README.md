@@ -85,7 +85,93 @@ Refer to in-source documentation and examples for more information.
 
 ```
 
- See example.cpp for another example with sub-packets etc.
+Another example (multiple level of packets):
+
+```c
+    /* packet created as follows: */
+    Packet all(buffer, total_size);
+    all.set_name("Flat data packet");
+    all.add_field<char*> ("payload", all.bytes_left()); // create one field only with remaining space
+
+    // packet is just a way of interpreting / using the data- there could be more packetso
+    // to interpret the same buffer
+    Packet car(buffer, total_size);
+    car.set_name("CAR");
+
+    car.add_field<char*>("make", 9); // 9 bytes for make
+    car.add_field<char*>("model", 9);
+
+    car.add_field<int>("prod_year");
+    car.add_field<char*>("engine", 27);
+
+    // can add sub-packets within ptr fields:
+    Packet& engine = car.sub_packet("engine");
+    engine.add_field<char*>("type", 8);
+    engine.add_field<char*>("fuel", 8);
+    engine.add_field<char*>("version", 3);
+
+    engine.add_field<char*>("params", 6); // 6 bytes for params
+    Packet& engine_params = engine.sub_packet("params");
+    engine_params.add_field<short>("ps");
+    engine_params.add_field<short>("top speed mph");
+    engine_params.add_field<short>("cylinders");
+
+    // accessing fields
+    car.set_field("make", "Porshe", sizeof("Porshe"));
+    car.set_field("model", "911 GT1", sizeof("911 GT1"));
+    car.set_field("prod_year", 2008);
+
+    engine_params.set_field("cylinders", 6);
+    engine_params.set_field("top speed mph", 191);
+
+    // can also access sub-packets by traversing from the root..
+    car.sub_packet("engine").set_field("fuel", "Ethanol", 7);
+    car.sub_packet("engine").set_field("type", "flat-6", 6);
+
+    car.sub_packet("engine").sub_packet("params").set_field("ps", 544);
+
+// could be printed as follows:
+std::cout << "\n" << car << "\n";
+
+/* output:
+
+CAR, total size: 0x31 :
+make      : (size 0x9): 50 6f 72 73 68 65 00 00 00                        Porshe...
+model     : (size 0x9): 39 31 31 20 47 54 31 00 00                        911 GT1..
+prod_year : 0x7d8
+engine    : (size 0x1b):
+  type        : (size 0x8): 66 6c 61 74 2d 36 00 00                           flat-6..
+  fuel        : (size 0x8): 45 74 68 61 6e 6f 6c 00                           Ethanol.
+  version     : (size 0x3): 00 00 00                                          ...
+  params      : (size 0x6):
+    ps                    : 0x220
+    top speed mph         : 0xbf
+    cylinders             : 0x6
+*/
+
+
+std::cout << all << "\n"; // print the whole payload data..
+
+/* output:
+
+Flat data packet, total size: 0x36 :
+payload : (size 0x36):
+                       50 6f 72 73 68 65 00 00 00 39 31 31 20 47 54 31   Porshe...911 GT1
+                       00 00 d8 07 00 00 66 6c 61 74 2d 36 00 00 45 74   ......flat-6..Et
+                       68 61 6e 6f 6c 00 00 00 00 20 02 bf 00 06 00 00   hanol.... ......
+                       00 00 00 00 00 00                                 ......
+ */
+
+// or in JSON:
+car.to_json(std::cout);
+
+/* output:
+{"name": "CAR", "total_size": 49, "fields": ["make": "Porshe", "model": "911 GT1", "prod_year": 2008, "engine": {"fields": ["type": "flat-6", "fuel": "Ethanol", "version": "", "params": {"fields": ["ps": 544, "top speed mph": 191, "cylinders": 6]}]}]}
+*/
+
+
+```
+
 
 
 
