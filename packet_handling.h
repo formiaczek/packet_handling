@@ -90,6 +90,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <utility>
 #include <stdio.h>
 
@@ -1520,6 +1521,13 @@ public:
 
         out << "]}";
         return out;
+    }
+
+    std::string to_json()
+    {
+        std::stringstream json;
+        to_json(json);
+        return json.str();
     }
 
 private:
